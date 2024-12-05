@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    #vis.vega-embed {
+      width: 100%;
+      display: flex;
+    }
+
+    #vis.vega-embed details,
+    #vis.vega-embed details summary {
+      position: relative;
+    }
+  </style>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-lite@5.20.1"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+</head>
+<body>
+  <div id="vis"></div>
+  <script>
+    (function(vegaEmbed) {
+      var spec = {"config": {"view": {"continuousWidth": 300, "continuousHeight": 300}}, "layer": [{"mark": {"type": "boxplot", "size": 60}, "encoding": {"color": {"field": "trump_win", "legend": {"labelExpr": "datum.label == '1' ? 'Trump (Red)' : 'Biden (Blue)'", "title": "Election Winner"}, "scale": {"domain": [1, 0], "range": ["red", "blue"]}, "title": "Election Winner", "type": "nominal"}, "x": {"axis": {"labelExpr": "datum.value == 1 ? 'Trump' : 'Biden'", "labels": true}, "field": "trump_win", "title": "Election Winner", "type": "nominal"}, "y": {"field": "cumulative_deaths", "title": "Cumulative COVID-19 Deaths", "type": "quantitative"}}}, {"mark": {"type": "circle", "opacity": 0.6, "size": 80}, "encoding": {"color": {"field": "trump_win", "scale": {"domain": [1, 0], "range": ["red", "blue"]}, "type": "nominal"}, "tooltip": [{"field": "state", "type": "nominal"}, {"field": "cumulative_deaths", "type": "quantitative"}], "x": {"field": "trump_win", "type": "nominal"}, "y": {"field": "cumulative_deaths", "type": "quantitative"}}}], "data": {"name": "data-41b51d6ccad8bd7249515710797090b2"}, "height": 400, "title": "Cumulative COVID-19 Deaths by Election Winner (Trump vs. Biden)", "width": 400, "$schema": "https://vega.github.io/schema/vega-lite/v5.20.1.json", "datasets": {"data-41b51d6ccad8bd7249515710797090b2": [{"state": "AK", "cumulative_deaths": 3726, "trump_win": 1, "biden_win": 0}, {"state": "AL", "cumulative_deaths": 60318, "trump_win": 1, "biden_win": 0}, {"state": "AR", "cumulative_deaths": 31530, "trump_win": 1, "biden_win": 0}, {"state": "AZ", "cumulative_deaths": 90639, "trump_win": 0, "biden_win": 1}, {"state": "CA", "cumulative_deaths": 325848, "trump_win": 0, "biden_win": 1}, {"state": "CO", "cumulative_deaths": 42786, "trump_win": 0, "biden_win": 1}, {"state": "CT", "cumulative_deaths": 37692, "trump_win": 0, "biden_win": 1}, {"state": "DC", "cumulative_deaths": 6693, "trump_win": 0, "biden_win": 1}, {"state": "DE", "cumulative_deaths": 10338, "trump_win": 0, "biden_win": 1}, {"state": "FL", "cumulative_deaths": 243018, "trump_win": 1, "biden_win": 0}, {"state": "GA", "cumulative_deaths": 99231, "trump_win": 0, "biden_win": 1}, {"state": "HI", "cumulative_deaths": 5673, "trump_win": 0, "biden_win": 1}, {"state": "IA", "cumulative_deaths": 22497, "trump_win": 1, "biden_win": 0}, {"state": "ID", "cumulative_deaths": 14298, "trump_win": 1, "biden_win": 0}, {"state": "IL", "cumulative_deaths": 109311, "trump_win": 0, "biden_win": 1}, {"state": "IN", "cumulative_deaths": 74484, "trump_win": 1, "biden_win": 0}, {"state": "KS", "cumulative_deaths": 24180, "trump_win": 1, "biden_win": 0}, {"state": "KY", "cumulative_deaths": 51228, "trump_win": 1, "biden_win": 0}, {"state": "LA", "cumulative_deaths": 48459, "trump_win": 1, "biden_win": 0}, {"state": "MA", "cumulative_deaths": 63792, "trump_win": 0, "biden_win": 1}, {"state": "MD", "cumulative_deaths": 53775, "trump_win": 0, "biden_win": 1}, {"state": "ME", "cumulative_deaths": 8211, "trump_win": 0, "biden_win": 1}, {"state": "MI", "cumulative_deaths": 105369, "trump_win": 0, "biden_win": 1}, {"state": "MN", "cumulative_deaths": 38262, "trump_win": 0, "biden_win": 1}, {"state": "MO", "cumulative_deaths": 62085, "trump_win": 1, "biden_win": 0}, {"state": "MS", "cumulative_deaths": 38313, "trump_win": 1, "biden_win": 0}, {"state": "MT", "cumulative_deaths": 9315, "trump_win": 1, "biden_win": 0}, {"state": "NC", "cumulative_deaths": 99159, "trump_win": 1, "biden_win": 0}, {"state": "ND", "cumulative_deaths": 6732, "trump_win": 1, "biden_win": 0}, {"state": "NE", "cumulative_deaths": 13671, "trump_win": 1, "biden_win": 0}, {"state": "NH", "cumulative_deaths": 8988, "trump_win": 0, "biden_win": 1}, {"state": "NJ", "cumulative_deaths": 107073, "trump_win": 0, "biden_win": 1}, {"state": "NM", "cumulative_deaths": 25005, "trump_win": 0, "biden_win": 1}, {"state": "NV", "cumulative_deaths": 35832, "trump_win": 0, "biden_win": 1}, {"state": "NY", "cumulative_deaths": 239049, "trump_win": 0, "biden_win": 1}, {"state": "OH", "cumulative_deaths": 144678, "trump_win": 1, "biden_win": 0}, {"state": "OK", "cumulative_deaths": 49473, "trump_win": 1, "biden_win": 0}, {"state": "OR", "cumulative_deaths": 25431, "trump_win": 0, "biden_win": 1}, {"state": "PA", "cumulative_deaths": 156900, "trump_win": 0, "biden_win": 1}, {"state": "RI", "cumulative_deaths": 12249, "trump_win": 0, "biden_win": 1}, {"state": "SC", "cumulative_deaths": 60297, "trump_win": 1, "biden_win": 0}, {"state": "SD", "cumulative_deaths": 6324, "trump_win": 1, "biden_win": 0}, {"state": "TN", "cumulative_deaths": 86043, "trump_win": 1, "biden_win": 0}, {"state": "TX", "cumulative_deaths": 298323, "trump_win": 1, "biden_win": 0}, {"state": "UT", "cumulative_deaths": 16056, "trump_win": 1, "biden_win": 0}, {"state": "VA", "cumulative_deaths": 60942, "trump_win": 0, "biden_win": 1}, {"state": "VT", "cumulative_deaths": 1647, "trump_win": 0, "biden_win": 1}, {"state": "WA", "cumulative_deaths": 43377, "trump_win": 0, "biden_win": 1}, {"state": "WI", "cumulative_deaths": 46710, "trump_win": 0, "biden_win": 1}, {"state": "WV", "cumulative_deaths": 20862, "trump_win": 1, "biden_win": 0}, {"state": "WY", "cumulative_deaths": 4305, "trump_win": 1, "biden_win": 0}]}};
+      var embedOpt = {"mode": "vega-lite"};
+
+      function showError(el, error){
+          el.innerHTML = ('<div style="color:red;">'
+                          + '<p>JavaScript Error: ' + error.message + '</p>'
+                          + "<p>This usually means there's a typo in your chart specification. "
+                          + "See the javascript console for the full traceback.</p>"
+                          + '</div>');
+          throw error;
+      }
+      const el = document.getElementById('vis');
+      vegaEmbed("#vis", spec, embedOpt)
+        .catch(error => showError(el, error));
+    })(vegaEmbed);
+
+  </script>
+</body>
+</html>

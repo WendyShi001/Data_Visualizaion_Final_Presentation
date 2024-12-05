@@ -1,0 +1,12 @@
+name: Group_Shiny_Testing
+title: Group_Shiny_Updated
+username: wendyshi2001
+account: wendyshi2001
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13493014
+bundleId: 9464449
+url: https://wendyshi2001.shinyapps.io/Group_Shiny_Testing/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

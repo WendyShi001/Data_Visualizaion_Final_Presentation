@@ -1,0 +1,95 @@
+---
+title: "data_viz_final_project"
+author: "Holt Cochran"
+date: "2024-11-26"
+output: html_document
+---
+
+
+```{r, echo=FALSE}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(tidycensus)
+library(tigris)
+library(sf)
+library(plotly)
+```
+
+```{r}
+# import election data
+election_2020 <- read_csv("../Data/us_election_2020.csv")
+#election_2020
+```
+
+```{r}
+# import covid data
+covid_deaths_per_100k <- read_csv("../Data/covid_deaths_per_100K.csv")
+#covid_deaths_per_100k
+```
+
+```{r}
+# merge data
+state_deaths_per_100k <- left_join(covid_deaths_per_100k, election_2020, by = c("STATE" = "state_abr"))
+#state_deaths_per_100k
+```
+
+
+```{r}
+# filter data
+state_deaths_per_100k <- state_deaths_per_100k %>%
+  filter(YEAR == 2020) %>%
+  mutate(
+    winner = case_when(
+      trump_pct > biden_pct ~ "Trump",
+      biden_pct > trump_pct ~ "Biden",
+      TRUE ~ "Tie"  # Optional for ties
+    ),
+    winning_pct = pmax(trump_pct, biden_pct) # Max percentage of the winner
+  )
+
+
+# create plot of relationship with points and regression line
+gg <- ggplot(state_deaths_per_100k, aes(x = winning_pct, y = RATE)) +
+  # Points colored by winner
+  geom_point(aes(color = winner, 
+                 text = paste0("State: ", state, 
+                               "<br>Winner: ", winner,
+                               "<br>Vote %: ", winning_pct, 
+                               "<br>Deaths per 100k: ", RATE)), 
+             size = 3, alpha = 0.7) +
+  
+  # regression line for Trump
+  geom_smooth(data = filter(state_deaths_per_100k, winner == "Trump"), 
+              aes(x = winning_pct, y = RATE, color = "Trump"), 
+              method = "lm", se = FALSE, linetype = "dashed") +
+  
+  # regression line for Biden
+  geom_smooth(data = filter(state_deaths_per_100k, winner == "Biden"), 
+              aes(x = winning_pct, y = RATE, color = "Biden"), 
+              method = "lm", se = FALSE, linetype = "dashed") +
+
+  scale_color_manual(
+    name = "Winner",
+    values = c("Trump" = "red", "Biden" = "blue", "Tie" = "gray"),
+    labels = c("Trump (Red)", "Biden (Blue)", "Tie (Gray)")
+  ) +
+  labs(
+    title = "COVID-19 Death Rate vs. Voting Percentage (2020 Election)",
+    x = "Winning Candidate Voting Percentage",
+    y = "COVID-19 Deaths per 100k",
+    caption = "Source: Your Data Source"
+  ) +
+  theme_minimal()
+
+# convert to interactive plotly
+interactive_plot <- ggplotly(gg, tooltip = "text")
+
+# display
+interactive_plot
+
+htmlwidgets::saveWidget(as_widget(interactive_plot), "covid_election2020_plot.html")
+
+
+```
+
