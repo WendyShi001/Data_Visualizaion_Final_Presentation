@@ -193,9 +193,9 @@ server <- function(input, output) {
   
   output$dynamicContent <- renderUI({
     if (input$Selection == "Democrat") {
-      tags$div(includeHTML("Democratic_Votes_vs_Total_Deaths.html"))
+      tags$div(includeHTML("Democratic_Votes_vs_Total_Deaths(2020).html"))
     } else if (input$Selection == "Republican") {
-      tags$div(includeHTML("Republican_Votes_vs_Total_Deaths.html"))
+      tags$div(includeHTML("Republican_Votes_vs_Total_Deaths(2020).html"))
     }
   })
   
