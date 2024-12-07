@@ -19,11 +19,11 @@ library(openxlsx)
 # If value less than 0, affect it more than other race, smaller the percentage
 #more than proportion of people in that ethnicity died
 
-plotting_data <- read.xlsx("../Data/Wendy_Plotting_data.xlsx")
+plotting_data <- read.xlsx("Wendy_Plotting_data.xlsx")
 selection_list <- c("Black", "Native_American", "Asian", "Pacific_Islander", "Hispanic")
 #selection_list <- c("White", "Black", "Native_American", "Asian", "Pacific_Islander", "Hispanic")
 
-election_data = read.csv("../Data/us_election_2020.csv")
+election_data = read.csv("us_election_2020.csv")
 
 election_data <- election_data %>% 
   select(c(state_abr, trump_win))
@@ -31,7 +31,12 @@ election_data <- election_data %>%
 plotting_data <- plotting_data %>% 
   inner_join(election_data, by = c("State" = "state_abr"))
 
-US_state_hexgrid <- sf::st_read("../Data/us_states_hexgrid.geojson")
+US_state_hexgrid <- sf::st_read("us_states_hexgrid.geojson")
+US_state_hexgrid <- sf::st_transform(US_state_hexgrid, crs = 3857)
+
+st_crs(US_state_hexgrid)
+US_state_hexgrid <- st_make_valid(US_state_hexgrid)
+
 
 US_state_hexgrid <- US_state_hexgrid %>% 
   rename(State = 'iso3166_2')
@@ -75,11 +80,15 @@ ui <- fluidPage(
     ),
     
     tabPanel("Covid Time Series",
-            tags$div(
-            style = "display: flex; justify-content: center; align-items: center; overflow: hidden;",
-            tags$div(includeHTML("jasmine_chart.html")
-                     )
-            )
+             tags$div(
+               style = "display: flex; justify-content: center; align-items: center; overflow: hidden;",
+               tags$iframe(
+                 src = "jasmine_chart.html",
+                 width = "100%",
+                 height = "600px",
+                 frameborder = "0"
+               )
+             )
     ),
     
     # GGiraph Plot with Selection Bar
@@ -137,8 +146,8 @@ shinyApp(ui = ui, server = server)
 server <- function(input, output) {
   
   #Holt's Data Visualization --------------------------------------------------------
-  election_2020 <- read_csv("../Data/us_election_2020.csv", show_col_types = FALSE)
-  covid_deaths_per_100k <- read_csv("../Data/covid_deaths_per_100K.csv", show_col_types = FALSE)
+  election_2020 <- read_csv("us_election_2020.csv", show_col_types = FALSE)
+  covid_deaths_per_100k <- read_csv("covid_deaths_per_100K.csv", show_col_types = FALSE)
   state_deaths_per_100k <- left_join(covid_deaths_per_100k, election_2020, by = c("STATE" = "state_abr"))
   
   state_deaths_per_100k <- state_deaths_per_100k %>%
@@ -153,8 +162,9 @@ server <- function(input, output) {
     )
   
   output$plotly <- renderPlotly({
+    # Create ggplot object
     gg <- ggplot(state_deaths_per_100k, aes(x = winning_pct, y = RATE)) +
-      # Points colored by winner
+      # Points colored by winner with interactive text
       geom_point(aes(color = winner, 
                      text = paste0("State: ", state, 
                                    "<br>Winner: ", winner,
@@ -162,21 +172,24 @@ server <- function(input, output) {
                                    "<br>Deaths per 100k: ", RATE)), 
                  size = 3, alpha = 0.7) +
       
-      # regression line for Trump
+      # Regression line for Trump
       geom_smooth(data = filter(state_deaths_per_100k, winner == "Trump"), 
                   aes(x = winning_pct, y = RATE, color = "Trump"), 
                   method = "lm", se = FALSE, linetype = "dashed") +
       
-      # regression line for Biden
+      # Regression line for Biden
       geom_smooth(data = filter(state_deaths_per_100k, winner == "Biden"), 
                   aes(x = winning_pct, y = RATE, color = "Biden"), 
                   method = "lm", se = FALSE, linetype = "dashed") +
       
+      # Custom color scale
       scale_color_manual(
         name = "Winner",
         values = c("Trump" = "red", "Biden" = "blue", "Tie" = "gray"),
         labels = c("Trump (Red)", "Biden (Blue)", "Tie (Gray)")
       ) +
+      
+      # Labels and theme
       labs(
         title = "COVID-19 Death Rate vs. State Voting Percentages (2020 Election)",
         x = "Winning Candidate Voting Percentage by State",
@@ -185,17 +198,28 @@ server <- function(input, output) {
       ) +
       theme_minimal()
     
-    # convert to interactive plotly
+    # Convert to interactive plotly
     ggplotly(gg, tooltip = "text")
   })
+  
   
   #Jiali's Dynamic output----------------------------------------------------------
   
   output$dynamicContent <- renderUI({
     if (input$Selection == "Democrat") {
-      tags$div(includeHTML("Democratic_Votes_vs_Total_Deaths(2020).html"))
+      tags$iframe(
+        src = "Democratic_Votes_vs_Total_Deaths(2020).html",
+        width = "100%",
+        height = "600px",
+        frameborder = "0"
+      )
     } else if (input$Selection == "Republican") {
-      tags$div(includeHTML("Republican_Votes_vs_Total_Deaths(2020).html"))
+      tags$iframe(
+        src = "Republican_Votes_vs_Total_Deaths(2020).html",
+        width = "100%",
+        height = "600px",
+        frameborder = "0"
+      )
     }
   })
   
