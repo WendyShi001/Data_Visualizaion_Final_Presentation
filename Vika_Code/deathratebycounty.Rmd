@@ -1,0 +1,97 @@
+---
+output: html_document
+runtime: shiny
+---
+```{r}
+library(shiny)
+library(tidycensus)
+library(dplyr)
+library(stringr)
+library(tigris)
+library(sf)
+library(leaflet)
+
+census_api_key('c3877d776d03f23f4f589f28c7344fe1a41a6297')
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("COVID-19 Death Rates by County"),
+  leafletOutput("covidMap", height = "800px")
+)
+
+# Define Server
+server <- function(input, output, session) {
+  
+  # Load population data
+  population_data <- reactive({
+    get_acs(
+      geography = "county",
+      variables = "B01003_001",
+      year = 2020,
+      survey = "acs5"
+    ) %>%
+      rename(
+        fips_code = GEOID,
+        population = estimate
+      )
+  })
+  
+  # Load COVID-19 case data
+  covid_case <- reactive({
+    original_covid_case <- read.csv('/Users/vikali/Downloads/covid/covid-cases.csv')
+    
+    original_covid_case %>%
+      mutate(fips_code = str_pad(as.character(fips_code), width = 5, pad = "0")) %>%
+      group_by(county, state, fips_code) %>%
+      summarize(total_deaths = max(cumulative_deaths, na.rm = TRUE)) %>%
+      left_join(population_data(), by = "fips_code") %>%
+      mutate(death_rate_per_100k = (total_deaths / population) * 100000)
+  })
+  
+  # Prepare map data
+  map_data <- reactive({
+    counties_sf <- counties(cb = TRUE, year = 2020, class = "sf")
+    counties_sf %>%
+      left_join(covid_case(), by = c("GEOID" = "fips_code")) %>%
+      st_transform(crs = 4326)
+  })
+  
+  # Render Leaflet map
+  output$covidMap <- renderLeaflet({
+    leaflet(data = map_data()) %>%
+      setView(lng = -98.35, lat = 39.50, zoom = 4) %>%  
+      addPolygons(
+        fillColor = ~colorNumeric("YlOrRd", death_rate_per_100k)(death_rate_per_100k),
+        weight = 1,
+        opacity = 1,
+        color = "white",
+        dashArray = "3",
+        fillOpacity = 0.7,
+        highlight = highlightOptions(
+          weight = 5,
+          color = "#666",
+          dashArray = "",
+          fillOpacity = 0.7,
+          bringToFront = TRUE
+        ),
+        popup = ~paste(
+          "<b>County:</b> ", county, "<br>",
+          "<b>Total Deaths:</b> ", total_deaths, "<br>",
+          "<b>Population:</b> ", population, "<br>",
+          "<b>Death Rate (per 100k):</b> ", round(death_rate_per_100k, 2)
+        )
+      ) %>%
+      addLegend(
+        pal = colorNumeric("YlOrRd", NULL),
+        values = ~death_rate_per_100k,
+        title = "Deaths per 100,000",
+        position = "bottomright"
+      )
+  })
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
+
+```
+
