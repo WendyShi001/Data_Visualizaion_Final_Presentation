@@ -10,22 +10,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 
-setwd('/Users/vvvika/Downloads/covid')
+#setwd('/Users/vvvika/Downloads/covid')
 
 library(openxlsx) 
 library(tidyr)
 library(dplyr)
 
-covid_case_orginial <- read.csv('covid-cases.csv')
-mask <- read.csv('mask-mandates (1).csv')
-death <- read.csv('Provisional_COVID-19_Deaths_by_County__and_Race_and_Hispanic_Origin_20241120.csv')
-election <- read.xlsx('statistic_id630799_election-2016_-results-by-state.xlsx')
+covid_case_orginial <- read.csv('../data/covid-cases.csv')
+mask <- read.csv('../data/mask-mandates.csv')
+death <- read.csv('../data/Provisional_COVID-19_Deaths_by_County__and_Race_and_Hispanic_Origin_20241120.csv')
+#election <- read.xlsx('statistic_id630799_election-2016_-results-by-state.xlsx')
 
 head(covid_case_orginial)
 head(mask)
 head(death)
-head(election)
-
+#head(election)
 
 mask$date <- as.Date(mask$date, format = "%m/%d/%Y")
 covid_case_orginial$date <- as.Date(covid_case_orginial$date, format = "%m/%d/%Y")
@@ -94,12 +93,18 @@ aggregated_data <- merged_data %>%
     avg_cumulative_deaths_per_100k = mean(cumulative_deaths_per_100k, na.rm = TRUE),
     .groups = "drop"
   )
+
+write.csv(merged_data, "Vika_mask_data.csv", row.names = FALSE)
+```
+
+```{r}
+# Define UI
+
 library(shiny)
 library(dplyr)
 library(ggplot2)
 library(plotly)
 
-# Define UI
 ui <- fluidPage(
   titlePanel("Effect of Mask Mandates: County-Level Scatter Plot"),
   

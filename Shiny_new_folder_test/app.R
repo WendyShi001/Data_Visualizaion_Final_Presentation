@@ -1,5 +1,6 @@
 library(shiny)
 library(shinythemes)
+library(tidycensus)
 library(tidyverse)
 library(leaflet)
 library(leaflet.extras)
@@ -13,6 +14,10 @@ library(dplyr)
 library(forcats)
 library(patchwork)
 library(openxlsx)
+library(stringr)
+library(tigris)
+library(leaflet)
+
 
 # Load data
 # Percentage of population minus percentage of people died
@@ -41,6 +46,27 @@ US_state_hexgrid <- st_make_valid(US_state_hexgrid)
 US_state_hexgrid <- US_state_hexgrid %>% 
   rename(State = 'iso3166_2')
 
+#Vika's Data Transformation-------------------------------------------------------
+
+covid_case_orginial <- read.csv('../data/covid-cases.csv')
+death <- read.csv('../data/Provisional_COVID-19_Deaths_by_County__and_Race_and_Hispanic_Origin_20241120.csv')
+
+merged_data <- read.csv('../data/vika_mask_data.csv')
+
+# Aggregate COVID metrics by mandate status and date
+aggregated_data <- merged_data %>%
+  group_by(mandate_status, date,fips_code,county,state,state_fips) %>%
+  summarize(
+    avg_cumulative_cases_per_100k = mean(cumulative_cases_per_100k, na.rm = TRUE),
+    avg_cumulative_deaths_per_100k = mean(cumulative_deaths_per_100k, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+library(leaflet)
+census_api_key('c3877d776d03f23f4f589f28c7344fe1a41a6297')
+
+#-------------------------------------------------------------------------------------------------------
+
 # Define UI
 ui <- fluidPage(
   theme = shinytheme("flatly"),
@@ -58,21 +84,33 @@ ui <- fluidPage(
     
         # Other Tabs without Selection Bar
         tabPanel("Death per County", 
-             tags$div(
-             style = "display: flex; justify-content: center; align-items: center;",
-             tags$img(src = "deathratepercounty.png", alt = "Death rate", 
-                      style = "width:75%; height:auto;")
+               titlePanel("COVID-19 Death Rates by County"),
+               sidebarLayout(
+                 sidebarPanel(
+                   p(HTML("This graph shows the Covid Death count by county")),
+                 ),
+             mainPanel(
+               leafletOutput("covidMap", height = "800px")
              )
-    ),
+        )
+        ),
     
     tabPanel("Political Ideology and Covid Death", 
-             plotlyOutput("plotly")
+             sidebarLayout(
+               sidebarPanel(
+                 p(HTML("This graph shows the relationship between Political Ideology and Covid Death")),
+               ),
+               mainPanel(
+                 plotlyOutput("plotly")
+               )
+             )
     ),
     
     tabPanel("Ideology, Death and Population",
              sidebarPanel(
              selectInput("Selection", "Choose a Political Party:",
-                         choices = c("Democrat", "Republican"))
+                         choices = c("Democrat", "Republican")),
+             p(HTML("This graph shows the relationship between Political Ideology and Covid Death Count")),
              ),
              mainPanel(
                uiOutput("dynamicContent")
@@ -80,18 +118,23 @@ ui <- fluidPage(
     ),
     
     tabPanel("Covid Time Series",
-             tags$div(
-               style = "display: flex; justify-content: center; align-items: center; overflow: hidden;",
-               tags$iframe(
-                 src = "jasmine_chart.html",
-                 width = "100%",
-                 height = "600px",
-                 frameborder = "0"
+             sidebarPanel(
+               p(HTML("This graph provide a Covid time series analysis")),
+             ),
+             mainPanel(
+               tags$div(
+                 style = "display: flex; justify-content: center; align-items: center; overflow: hidden;",
+                 tags$iframe(
+                   src = "jasmine_chart.html",
+                   width = "100%",
+                   height = "600px",
+                   frameborder = "0"
+                 )
                )
              )
     ),
     
-    # GGiraph Plot with Selection Bar
+    # ggiraph Plot with Selection Bar
     tabPanel("Race & Ethnicity", 
              sidebarLayout(
                sidebarPanel(
@@ -105,7 +148,8 @@ ui <- fluidPage(
                  selectInput(inputId = "ethni_select",
                              label = "Select Race:",
                              choices = selection_list,
-                             selected = "Black")
+                             selected = "Black"),
+                 p(HTML("conclusions:")),
                ),
                mainPanel(
                  girafeOutput("interactive_plot")
@@ -114,15 +158,25 @@ ui <- fluidPage(
     ),
     
     tabPanel("Mask Mandate", 
-             tags$div(
-               style = "display: flex; justify-content: center; align-items: center;",
-               tags$img(src = "the effect of mask mandate.png", alt = "Death rate", 
-                      style = "max-width: 60%; height: auto;"),
+             sidebarLayout(
+               sidebarPanel(
+                 dateRangeInput("date_filter", 
+                                "Select Date Range:",
+                                start = as.Date("2020-06-01"),  # Default start date
+                                end = as.Date("2020-07-31"),    # Default end date
+                                min = min(merged_data$date),
+                                max = max(merged_data$date)),
+                 checkboxInput("show_trend", "Show Trend Line", value = TRUE),
+                 p(HTML("conclusions:"))
+               ),
+               mainPanel(
+                 plotlyOutput("scatter_plot")
+               )
              )
-    )#current tabPanel
+    )#Current TabPanel
     
-  )# bracket to Tabset Panel
-)#bracket to fluid page
+  )# End Bracket to Tabset Panel
+)# UI/UX Panel
 
 # Define Server
 server <- function(input, output) {
@@ -297,6 +351,162 @@ server <- function(input, output) {
       interactive_combined_plot,
       opts_hover(css = "fill:red;stroke:black;")
     )
+  })
+  
+  #Vika's visualization--------------------------------------------------------------
+  #First Plot:
+  # Load population data
+  population_data <- reactive({
+    get_acs(
+      geography = "county",
+      variables = "B01003_001",
+      year = 2020,
+      survey = "acs5"
+    ) %>%
+      rename(
+        fips_code = GEOID,
+        population = estimate
+      )
+  })
+  
+  # Load COVID-19 case data
+  covid_case <- reactive({
+    original_covid_case <- read.csv('../data/covid-cases.csv')
+    
+    original_covid_case %>%
+      mutate(fips_code = str_pad(as.character(fips_code), width = 5, pad = "0")) %>%
+      group_by(county, state, fips_code) %>%
+      summarize(total_deaths = max(cumulative_deaths, na.rm = TRUE)) %>%
+      left_join(population_data(), by = "fips_code") %>%
+      mutate(death_rate_per_100k = (total_deaths / population) * 100000)
+  })
+  
+  # Prepare map data
+  map_data <- reactive({
+    counties_sf <- counties(cb = TRUE, year = 2020, class = "sf")
+    counties_sf %>%
+      left_join(covid_case(), by = c("GEOID" = "fips_code")) %>%
+      st_transform(crs = 4326)
+  })
+  
+  output$covidMap <- renderLeaflet({
+    leaflet(data = map_data()) %>%
+      setView(lng = -98.35, lat = 39.50, zoom = 4) %>%  
+      addPolygons(
+        fillColor = ~colorNumeric("YlOrRd", death_rate_per_100k)(death_rate_per_100k),
+        weight = 1,
+        opacity = 1,
+        color = "white",
+        dashArray = "3",
+        fillOpacity = 0.7,
+        highlight = highlightOptions(
+          weight = 5,
+          color = "#666",
+          dashArray = "",
+          fillOpacity = 0.7,
+          bringToFront = TRUE
+        ),
+        popup = ~paste(
+          "<b>County:</b> ", county, "<br>",
+          "<b>Total Deaths:</b> ", total_deaths, "<br>",
+          "<b>Population:</b> ", population, "<br>",
+          "<b>Death Rate (per 100k):</b> ", round(death_rate_per_100k, 2)
+        )
+      ) %>%
+      addLegend(
+        pal = colorNumeric("YlOrRd", NULL),
+        values = ~death_rate_per_100k,
+        title = "Deaths per 100,000",
+        position = "bottomright"
+      )
+  })
+  
+  #Vika's Second plot---------------------------------------
+  
+  
+  # Filter and normalize data
+  normalized_data <- reactive({
+    req(input$date_filter)  # Ensure the input is available
+    
+    # Filter data based on date range
+    data <- merged_data %>%
+      filter(
+        date >= as.Date(input$date_filter[1]),
+        date <= as.Date(input$date_filter[2]),
+        mandate_status %in% c("Always Mandated", "Never Mandated")
+      )
+    
+    # Calculate Z-scores (standardize within each group)
+    data <- data %>%
+      group_by(mandate_status) %>%
+      mutate(
+        z_cumulative_cases = scale(cumulative_cases_per_100k),
+        z_cumulative_deaths = scale(cumulative_deaths_per_100k)
+      ) %>%
+      ungroup()
+    
+    data
+  })
+  
+  output$covidMap <- renderLeaflet({
+    leaflet(data = map_data()) %>%
+      setView(lng = -98.35, lat = 39.50, zoom = 4) %>%  
+      addPolygons(
+        fillColor = ~colorNumeric("YlOrRd", death_rate_per_100k)(death_rate_per_100k),
+        weight = 1,
+        opacity = 1,
+        color = "white",
+        dashArray = "3",
+        fillOpacity = 0.7,
+        highlight = highlightOptions(
+          weight = 5,
+          color = "#666",
+          dashArray = "",
+          fillOpacity = 0.7,
+          bringToFront = TRUE
+        ),
+        popup = ~paste(
+          "<b>County:</b> ", county, "<br>",
+          "<b>Total Deaths:</b> ", total_deaths, "<br>",
+          "<b>Population:</b> ", population, "<br>",
+          "<b>Death Rate (per 100k):</b> ", round(death_rate_per_100k, 2)
+        )
+      ) %>%
+      addLegend(
+        pal = colorNumeric("YlOrRd", NULL),
+        values = ~death_rate_per_100k,
+        title = "Deaths per 100,000",
+        position = "bottomright"
+      )
+  })
+  
+  
+  
+  # Render interactive scatter plot
+  output$scatter_plot <- renderPlotly({
+    data <- normalized_data()
+    p <- ggplot(data, aes(x = z_cumulative_cases, y = z_cumulative_deaths, color = mandate_status,
+                          text = paste("County:", county,
+                                       "<br>Cumulative Cases per 100k:", round(cumulative_cases_per_100k, 2),
+                                       "<br>Cumulative Deaths per 100k:", round(cumulative_deaths_per_100k, 2),
+                                       "<br>Cases Z-Score:", round(z_cumulative_cases, 2),
+                                       "<br>Deaths Z-Score:", round(z_cumulative_deaths, 2)))) +
+      geom_point(alpha = 0.5, size = 2) +  # Smaller points for less clutter
+      labs(
+        title = "Scatter Plot: Cases vs. Deaths (Z-Scores)",
+        x = "Normalized Cumulative Cases (Z-Score)",
+        y = "Normalized Cumulative Deaths (Z-Score)",
+        color = "Mandate Status"
+      ) +
+      theme_minimal()
+    
+    # Optionally add a trend line
+    if (input$show_trend) {
+      p <- p + geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1)
+    }
+    
+    # Convert to interactive plot
+    ggplotly(p, tooltip = "text")
   })
 }
 

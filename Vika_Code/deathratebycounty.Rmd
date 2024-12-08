@@ -38,7 +38,7 @@ server <- function(input, output, session) {
   
   # Load COVID-19 case data
   covid_case <- reactive({
-    original_covid_case <- read.csv('/Users/vikali/Downloads/covid/covid-cases.csv')
+    original_covid_case <- read.csv('../data/covid-cases.csv')
     
     original_covid_case %>%
       mutate(fips_code = str_pad(as.character(fips_code), width = 5, pad = "0")) %>%
